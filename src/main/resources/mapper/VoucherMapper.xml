@@ -1,13 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.hmdp.mapper.VoucherMapper">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-    <select id="queryVoucherOfShop" resultType="com.hmdp.entity.Voucher" parameterType="java.lang.Long">
-        SELECT
-            v.`id`, v.`shop_id`, v.`title`, v.`sub_title`, v.`rules`, v.`pay_value`,
-            v.`actual_value`, v.`type`, sv.`stock` , sv.begin_time , sv.end_time
-        FROM tb_voucher v
-        LEFT JOIN  tb_seckill_voucher sv ON v.id = sv.voucher_id
-        WHERE v.shop_id = #{shopId} AND v.status = 1
+<mapper namespace="com.travel.mapper.PackageMapper">
+
+    <select id="queryPackageOfDestination"
+            parameterType="java.lang.Long"
+            resultType="com.travel.entity.Package">
+
+        SELECT p.id, p.destination_id, p.title, p.sub_title,
+               p.rules, p.pay_value, p.actual_value,
+               p.type, p.status,
+               sp.stock, sp.begin_time, sp.end_time
+        FROM tb_travel_package p
+                 LEFT JOIN tb_seckill_package sp
+                           ON p.id = sp.package_id
+        WHERE p.destination_id = #{destinationId}
+          AND p.status = 1
+
     </select>
+
 </mapper>
