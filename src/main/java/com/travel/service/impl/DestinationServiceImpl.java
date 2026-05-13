@@ -61,7 +61,7 @@ public class DestinationServiceImpl extends ServiceImpl<DestinationMapper, Desti
     
 
   public void saveDestination2Redis(Long id, Long expireSeconds){
-        //1.查询店铺数据
+        //1.查询景点数据
         Destination destination = getById(id);
 
         //2.封装逻辑过期时间
@@ -133,7 +133,7 @@ public class DestinationServiceImpl extends ServiceImpl<DestinationMapper, Desti
             distanceMap.put(shopIdStr, distance);
         });
 
-        //根据id查询店铺
+        //根据id查询景点
         String idStr = StrUtil.join(",", ids);
         List<Destination> destinations = query().in("id", ids).last("ORDER BY FIELD(id," + idStr + ")").list();
         for (Destination destination : destinations) {
