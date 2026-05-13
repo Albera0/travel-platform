@@ -1,9 +1,9 @@
 package com.travel.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.travel.entity.Follow;
+import com.travel.entity.AgentSession;
 
 
-public interface AgentSessionMapper extends BaseMapper<Follow> {
+public interface AgentSessionMapper extends BaseMapper<AgentSession> {
 
 }
