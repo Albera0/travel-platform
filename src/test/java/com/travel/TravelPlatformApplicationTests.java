@@ -22,8 +22,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.travel.utils.RedisConstants.CACHE_SHOP_KEY;
-import static com.travel.utils.RedisConstants.SHOP_GEO_KEY;
+import static com.travel.utils.RedisConstants.CACHE_DESTINATION_KEY;
+import static com.travel.utils.RedisConstants.DESTINATION_GEO_KEY;
 
 @SpringBootTest
 class TravelPlatformApplicationTests {
@@ -65,24 +65,24 @@ class TravelPlatformApplicationTests {
     }
 
     @Test
-    void testSaveShop() {
+    void testSaveDestination() {
         Destination destination = shopService.getById(1L);
 
-        cacheClient.setWithLogicExpire(CACHE_SHOP_KEY + 1L, destination, 10L, TimeUnit.SECONDS);
+        cacheClient.setWithLogicExpire(CACHE_DESTINATION_KEY + 1L, destination, 10L, TimeUnit.SECONDS);
     }
 
     @Test
-    void loadShopData() {
-        //查询店铺信息
+    void loadDestinationData() {
+        //查询景点信息
         List<Destination> list = shopService.list();
 
-        //把店铺分组，按照typeId分组
+        //把景点分组，按照typeId分组
         Map<Long, List<Destination>> map = list.stream().collect(Collectors.groupingBy(Destination::getTypeId));
 
         //分批写入redis
         for (Map.Entry<Long, List<Destination>> entry : map.entrySet()) {
             Long typeId = entry.getKey();
-            String key = SHOP_GEO_KEY + typeId;
+            String key = DESTINATION_GEO_KEY + typeId;
             List<Destination> value = entry.getValue();
             List<RedisGeoCommands.GeoLocation<String>> locations = new ArrayList<>(value.size());
             for (Destination destination : value) {
