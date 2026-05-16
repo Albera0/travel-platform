@@ -43,7 +43,7 @@ public class DestinationController {
     public Result saveDestination(@RequestBody Destination destination) {
         // 写入数据库
         destinationService.save(destination);
-        // 返回店铺id
+        // 返回景点id
         return Result.ok(destination.getId());
     }
 
@@ -91,5 +91,16 @@ public class DestinationController {
                 .page(new Page<>(current, SystemConstants.MAX_PAGE_SIZE));
         // 返回数据
         return Result.ok(page.getRecords());
+    }
+
+    /**
+     * agent根据景点名字查询城市景点信息
+     * @param city
+     * @return
+     */
+    @GetMapping("/agent/info")
+    public Result getDestinationForAgent(@RequestParam("city") String city) {
+
+        return destinationService.getDestinationForAgent(city);
     }
 }

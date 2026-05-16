@@ -16,4 +16,10 @@ public interface IDestinationService extends IService<Destination> {
     Result update(Destination destination);
 
     Result queryDestinationByType(Integer typeId, Integer current, Double x, Double y);
+
+    Result getDestinationForAgent(String city);
+
+    Result getIdByCity(String city);
+
 }
+

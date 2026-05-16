@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.travel.mapper.SeckillPackageMapper">
+
+    <select id="querySeckillPackageByPackageId"
+            parameterType="java.lang.Long"
+            resultType="com.travel.entity.SeckillPackage">
+        SELECT
+            p.id, p.stock, p.begin_time, p.end_time
+        FROM tb_travel_package p
+        WHERE p.id = #{packageId}
+    </select>
+
+</mapper>

@@ -46,7 +46,7 @@ public class Destination implements Serializable {
     private String images;
 
     /**
-     * 商城市
+     * 城市
      */
     private String area;
 

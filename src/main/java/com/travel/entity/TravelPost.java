@@ -30,7 +30,7 @@ public class TravelPost implements Serializable {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
     /**
-     * 商户id
+     * 景点id
      */
     private Long destinationId;
     /**
@@ -41,12 +41,11 @@ public class TravelPost implements Serializable {
      * 用户图标
      */
     @TableField(exist = false)
-    private String icon;
+    private String userIcon;
     /**
      * 用户姓名
      */
-    @TableField(exist = false)
-    private String name;
+    private String userName;
 
     /**
      * 是否点赞过了
@@ -60,12 +59,12 @@ public class TravelPost implements Serializable {
     private String title;
 
     /**
-     * 探店的照片，最多9张，多张以","隔开
+     * 照片，最多9张，多张以","隔开
      */
     private String images;
 
     /**
-     * 探店的文字描述
+     * 文字描述
      */
     private String content;
 

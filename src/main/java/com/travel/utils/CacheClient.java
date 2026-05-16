@@ -42,7 +42,7 @@ public class CacheClient {
 
     public <R, ID>R queryWithPassThrough(String keyPrefix, ID id, Class<R> type, Function<ID, R > dbFallback, Long time, TimeUnit unit) {
         String key = keyPrefix + id;
-        //1.从redis查询商铺缓存
+        //1.从redis查询景点缓存
         String json = stringRedisTemplate.opsForValue().get(key);
 
         //2.判断是否存在
@@ -81,7 +81,7 @@ public class CacheClient {
 
     public <R, ID>R queryWithLogicalExpire(String keyPrefix, ID id,  Class<R> type, Function<ID, R> dbFallback, Long time, TimeUnit unit) {
         String key = keyPrefix + id;
-        //1.从redis查询商铺缓存
+        //1.从redis查询景点缓存
         String json = stringRedisTemplate.opsForValue().get(key);
 
         //2.判断是否存在
@@ -97,7 +97,7 @@ public class CacheClient {
 
         //判断是否过期
         if(expireTime.isAfter(LocalDateTime.now())){
-            //未过期，直接返回商铺信息
+            //未过期，直接返回景点信息
             return r;
         }
 
@@ -128,7 +128,7 @@ public class CacheClient {
         }
 
 
-        //返回过期商铺信息
+        //返回过期景点信息
         return r;
 
     }

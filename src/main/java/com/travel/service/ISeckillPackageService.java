@@ -1,5 +1,6 @@
 package com.travel.service;
 
+import com.travel.dto.Result;
 import com.travel.entity.SeckillPackage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -10,4 +11,5 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface ISeckillPackageService extends IService<SeckillPackage> {
 
+    Result querySeckillPackageByPackageId(Long packageId);
 }

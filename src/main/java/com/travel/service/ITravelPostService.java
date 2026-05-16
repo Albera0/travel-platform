@@ -22,4 +22,7 @@ public interface ITravelPostService extends IService<TravelPost> {
     Result saveDestination(TravelPost travelPost);
 
     Result queryDestinationOfFollow(Long max, Integer offset);
+
+    Result queryHotByCityForAgent(String city, Integer current);
+
 }

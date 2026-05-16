@@ -10,7 +10,7 @@
 
         SELECT p.id, p.destination_id, p.title, p.sub_title,
                p.rules, p.pay_value, p.actual_value,
-               p.type, p.status,
+               p.type, p.status, p.stock, p.begin_time, p.end_time,
                sp.stock, sp.begin_time, sp.end_time
         FROM tb_travel_package p
                  LEFT JOIN tb_seckill_package sp

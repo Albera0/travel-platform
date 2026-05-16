@@ -33,7 +33,7 @@ public class Package implements Serializable {
     /**
      * 景点id
      */
-    private Long shopId;
+    private Long destinationId;
 
     /**
      * 门票标题
@@ -69,22 +69,20 @@ public class Package implements Serializable {
      * 门票状态
      */
     private Integer status;
+
     /**
      * 库存
      */
-    @TableField(exist = false)
     private Integer stock;
 
     /**
      * 生效时间
      */
-    @TableField(exist = false)
     private LocalDateTime beginTime;
 
     /**
      * 失效时间
      */
-    @TableField(exist = false)
     private LocalDateTime endTime;
 
     /**

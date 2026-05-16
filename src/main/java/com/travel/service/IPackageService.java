@@ -11,7 +11,9 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface IPackageService extends IService<Package> {
 
-    Result queryPackageOfShop(Long shopId);
+    Result queryPackageOfDestination(Long destinationId);
 
     void addSeckillPackage(Package aPackage);
+
+    Result queryPackageByCityForAgent(String city);
 }

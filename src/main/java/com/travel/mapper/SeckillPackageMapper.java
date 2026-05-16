@@ -2,6 +2,9 @@ package com.travel.mapper;
 
 import com.travel.entity.SeckillPackage;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 /**
  * <p>
@@ -10,5 +13,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
  */
 public interface SeckillPackageMapper extends BaseMapper<SeckillPackage> {
+
+    SeckillPackage querySeckillPackageByPackageId(@Param("packageId") Long packageId);
 
 }

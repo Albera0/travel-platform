@@ -3,6 +3,7 @@ package com.travel.service.impl;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.travel.dto.DestinationDTO;
 import com.travel.dto.Result;
 import com.travel.entity.Destination;
 import com.travel.mapper.DestinationMapper;
@@ -25,6 +26,7 @@ import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.travel.utils.RedisConstants.*;
 import static com.travel.utils.RedisConstants.CACHE_DESTINATION_TTL;
@@ -142,5 +144,57 @@ public class DestinationServiceImpl extends ServiceImpl<DestinationMapper, Desti
 
         //返回
       return Result.ok(destinations);
+    }
+
+    public Result getDestinationForAgent(String city) {
+
+        // 1. 查数据库（核心数据）
+        List<Destination> destinations = query()
+                .eq("area", city)
+                .list();
+
+        List<DestinationDTO> destinationDTOS = new ArrayList<>(destinations.size());
+        for  (Destination destination : destinations) {
+            DestinationDTO destinationDTO = DestinationDTO.builder()
+                    .name(destination.getName())
+                    .sold(destination.getSold())
+                    .area(destination.getArea())
+                    .x(destination.getX())
+                    .y(destination.getY())
+                    .score(destination.getScore())
+                    .avgPrice(destination.getAvgPrice())
+                    .openHours(destination.getOpenHours())
+                    .typeId(destination.getTypeId())
+                    .build();
+            destinationDTOS.add(destinationDTO);
+        }
+        return Result.ok(destinationDTOS);
+    }
+
+    @Override
+    public Result getIdByCity(String city) {
+
+        if (city == null || city.isEmpty()) {
+            return Result.ok(null);
+        }
+
+        // 1. 数据库查询（名称匹配）
+        List<Destination> destinations = query()
+                .eq("area", city)
+                .list();
+
+        // 2. 未找到
+        if (destinations == null) {
+            return Result.ok(null);
+        }
+
+        //3. 只提取id
+        List<Long> ids = new ArrayList<>(destinations.size());
+        for  (Destination destination : destinations) {
+            ids.add(destination.getId());
+        }
+
+        // 4. 返回ID
+        return Result.ok(ids);
     }
 }

@@ -78,35 +78,50 @@ CREATE TABLE tb_destination (
 -- POSTS
 -- =========================
 DROP TABLE IF EXISTS tb_travel_post;
+
 CREATE TABLE tb_travel_post (
-                                id BIGINT PRIMARY KEY AUTO_INCREMENT,
-                                destination_id BIGINT NOT NULL,
-                                user_id BIGINT NOT NULL,
-                                title VARCHAR(255),
-                                images VARCHAR(2048),
-                                content TEXT,
-                                liked INT DEFAULT 0,
-                                comments INT DEFAULT 0,
-                                create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                                id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
+
+                                destination_id BIGINT COMMENT '景点id',
+                                user_id BIGINT COMMENT '用户id',
+
+
+                                user_name VARCHAR(50) COMMENT '用户姓名（冗余）',
+                                user_icon VARCHAR(255) COMMENT '用户头像（冗余）',
+
+                                title VARCHAR(255) COMMENT '标题',
+                                images VARCHAR(2048) COMMENT '图片',
+                                content TEXT COMMENT '内容',
+
+                                liked INT DEFAULT 0 COMMENT '点赞数量',
+                                comments INT DEFAULT 0 COMMENT '评论数量',
+
+                                create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =========================
 -- PACKAGE / COUPON
 -- =========================
 DROP TABLE IF EXISTS tb_travel_package;
+
 CREATE TABLE tb_travel_package (
-                                   id BIGINT PRIMARY KEY AUTO_INCREMENT,
-                                   destination_id BIGINT,
-                                   title VARCHAR(255),
-                                   sub_title VARCHAR(255),
-                                   rules VARCHAR(1024),
-                                   pay_value BIGINT,
-                                   actual_value BIGINT,
-                                   type TINYINT DEFAULT 0,
-                                   status TINYINT DEFAULT 1,
-                                   create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                   update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                                   id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
+                                   destination_id BIGINT COMMENT '景点id',
+                                   title VARCHAR(255) COMMENT '门票标题',
+                                   sub_title VARCHAR(255) COMMENT '副标题',
+                                   rules VARCHAR(1024) COMMENT '使用规则',
+                                   pay_value BIGINT COMMENT '支付金额',
+                                   actual_value BIGINT COMMENT '抵扣金额',
+                                   type TINYINT DEFAULT 0 COMMENT '门票类型',
+                                   status TINYINT DEFAULT 1 COMMENT '门票状态',
+                                   stock INT DEFAULT 0 COMMENT '库存',
+                                   begin_time DATETIME COMMENT '生效时间',
+                                   end_time DATETIME COMMENT '失效时间',
+                                   create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                   update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+                                       ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 DROP TABLE IF EXISTS tb_seckill_package;
@@ -191,16 +206,91 @@ INSERT INTO tb_destination(name,type_id,images,area,address,x,y,avg_price,sold,c
                                                                                                               ('广州塔',4,'img3','广州','海珠区',113.33,23.11,150,9000,4100,48,'09:00-22:00'),
                                                                                                               ('西湖',3,'img4','杭州','西湖区',120.15,30.25,0,20000,9000,50,'全天');
 
-INSERT INTO tb_travel_post(destination_id,user_id,title,content,liked,comments) VALUES
-                                                                                    (1,1,'故宫攻略','早上去最好',100,20),
-                                                                                    (2,2,'迪士尼攻略','提前预约',300,50);
+INSERT INTO tb_travel_post
+(destination_id, user_id, user_name, user_icon, title, images, content, liked, comments, create_time, update_time)
+VALUES
+    (1, 1, '小明', 'icon1.png',
+     '故宫深度一日游攻略',
+     'img1.jpg,img2.jpg,img3.jpg',
+     '建议早上8点前入园，避开人流，重点看太和殿和珍宝馆。',
+     120, 35,
+     '2026-05-10 09:00:00', '2026-05-10 09:00:00'),
 
+    (1, 2, '小红', 'icon2.png',
+     '故宫拍照最佳路线',
+     'img4.jpg,img5.jpg,img6.jpg',
+     '午门进入→太和殿→御花园，下午光线适合拍照。',
+     98, 22,
+     '2026-05-10 10:30:00', '2026-05-10 10:30:00'),
+
+    (2, 3, '小李', 'icon3.png',
+     '迪士尼省时通关攻略',
+     'img7.jpg,img8.jpg,img9.jpg',
+     '建议提前买快速通行证，优先飞跃地平线。',
+     310, 60,
+     '2026-05-11 08:20:00', '2026-05-11 08:20:00'),
+
+    (2, 4, '小王', 'icon4.png',
+     '迪士尼亲子游体验分享',
+     'img10.jpg,img11.jpg',
+     '适合带小孩，幻想世界和小熊维尼最推荐。',
+     180, 41,
+     '2026-05-11 09:15:00', '2026-05-11 09:15:00'),
+
+    (3, 1, '小明', 'icon1.png',
+     '上海外滩夜景攻略',
+     'img12.jpg,img13.jpg,img14.jpg',
+     '晚上8点灯光最美，从外白渡桥开始走最好。',
+     250, 55,
+     '2026-05-12 19:00:00', '2026-05-12 19:00:00'),
+
+    (3, 2, '小红', 'icon2.png',
+     '外滩拍照机位推荐',
+     'img15.jpg,img16.jpg',
+     '和平饭店对面是最佳机位，可以拍陆家嘴全景。',
+     210, 48,
+     '2026-05-12 20:10:00', '2026-05-12 20:10:00'),
+
+    (4, 3, '小李', 'icon3.png',
+     '西湖一日游路线规划',
+     'img17.jpg,img18.jpg,img19.jpg',
+     '断桥→白堤→苏堤→雷峰塔，一天刚好走完。',
+     330, 72,
+     '2026-05-13 08:00:00', '2026-05-13 08:00:00'),
+
+    (4, 4, '小王', 'icon4.png',
+     '西湖骑行体验分享',
+     'img20.jpg,img21.jpg',
+     '租共享单车环湖非常舒服，春秋最佳。',
+     190, 33,
+     '2026-05-13 09:30:00', '2026-05-13 09:30:00');
 -- COUPONS / PACKAGES
-INSERT INTO tb_travel_package(id,destination_id,title,sub_title,rules,pay_value,actual_value,type,status) VALUES
-                                                                                                              (1,2,'上海迪士尼门票','双人票','不可退',99900,129900,0,1),
-                                                                                                              (2,1,'北京故宫讲解','含导游','不可退',19900,29900,1,1),
-                                                                                                              (3,4,'西湖一日游','含船票','可退',9900,19900,0,1),
-                                                                                                              (4,3,'广州塔夜游','观景','限时',8900,15900,1,1);
+
+INSERT INTO tb_travel_package(
+    id,destination_id,title,sub_title,rules,
+    pay_value,actual_value,type,status,
+    stock,begin_time,end_time,
+    create_time,update_time
+) VALUES
+      (1,2,'上海迪士尼门票','双人票','不可退',
+       99900,129900,0,1,
+       200,'2026-05-01 00:00:00','2026-12-31 23:59:59',
+       NOW(),NOW()),
+
+      (2,1,'北京故宫讲解','含导游','不可退',
+       19900,29900,1,1,
+       80,'2026-05-01 00:00:00','2026-10-01 23:59:59',
+       NOW(),NOW()),
+
+      (3,4,'西湖一日游','含船票','可退',
+       9900,19900,0,1,
+       150,'2026-05-01 00:00:00','2026-09-30 23:59:59',
+       NOW(),NOW()),
+
+      (4,3,'广州塔夜游','观景','限时',
+       8900,15900,1,1,
+       120,'2026-05-01 18:00:00','2026-12-31 23:59:59',
+       NOW(),NOW());
 
 INSERT INTO tb_seckill_package(package_id,stock,begin_time,end_time) VALUES
                                                                          (2,200,NOW(),DATE_ADD(NOW(),INTERVAL 7 DAY)),

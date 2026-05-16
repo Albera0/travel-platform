@@ -5,11 +5,13 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.travel.dto.Result;
 import com.travel.dto.ScrollResult;
+import com.travel.dto.TravelPostDTO;
 import com.travel.dto.UserDTO;
 import com.travel.entity.TravelPost;
 import com.travel.entity.Follow;
 import com.travel.entity.User;
 import com.travel.mapper.TravelPostMapper;
+import com.travel.service.IDestinationService;
 import com.travel.service.ITravelPostService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.travel.service.IFollowService;
@@ -46,6 +48,9 @@ public class TravelPostServiceImpl extends ServiceImpl<TravelPostMapper, TravelP
 
     @Resource
     private IFollowService followService;
+
+    @Resource
+    private IDestinationService destinationService;
 
     @Override
     public Result queryHotDestination(Integer current) {
@@ -221,10 +226,58 @@ public class TravelPostServiceImpl extends ServiceImpl<TravelPostMapper, TravelP
         return Result.ok(r);
     }
 
+
     private void queryDestinationUser(TravelPost travelPost) {
         Long userID = travelPost.getUserId();
         User user = userService.getById(userID);
-        travelPost.setName(user.getNickName());
-        travelPost.setIcon(user.getIcon());
+        travelPost.setUserName(user.getNickName());
+        travelPost.setUserIcon(user.getIcon());
+    }
+
+    /**
+     * Agent专用：根据景点名称获取热门帖子
+     *
+     * 核心流程：
+     * 1. 名称 → ID（景点服务）
+     * 2. ID → posts查询（数据库）
+     * 3. 按点赞排序
+     * 4. enrich用户信息
+     */
+    @Override
+    public Result queryHotByCityForAgent(String city, Integer current) {
+
+        // 1. 名称 → ID（Result.data）
+        Result idResult = destinationService.getIdByCity(city);
+
+        List<Long> destinationIds = (List<Long>) idResult.getData();
+
+        if (destinationIds == null || destinationIds.isEmpty()) {
+            return Result.ok(null);
+        }
+
+        // 2. 查询热门帖子
+        Page<TravelPost> page = this.lambdaQuery()
+                .in(TravelPost::getDestinationId, destinationIds)
+                .orderByDesc(TravelPost::getLiked)
+                .page(new Page<>(current, SystemConstants.MAX_PAGE_SIZE));
+
+        List<TravelPost> records = page.getRecords();
+
+        // 3. 构建DTO对象
+        List<TravelPostDTO> travelPostDTOS = new ArrayList<>(records.size());
+        for (TravelPost travelPost : records) {
+            TravelPostDTO travelPostDTO =  TravelPostDTO.builder()
+                    .title(travelPost.getTitle())
+                    .liked(travelPost.getLiked())
+                    .content(travelPost.getContent())
+                    .name(travelPost.getUserName())
+                    .destinationId(travelPost.getDestinationId())
+                    .createTime(travelPost.getCreateTime())
+                    .build();
+            travelPostDTOS.add(travelPostDTO);
+        }
+
+        // 4. 返回
+        return Result.ok(travelPostDTOS);
     }
 }

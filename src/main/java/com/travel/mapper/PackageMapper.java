@@ -14,5 +14,5 @@ import java.util.List;
  */
 public interface PackageMapper extends BaseMapper<Package> {
 
-    List<Package> queryPackageOfDestination(@Param("packageId") Long shopId);
+    List<Package> queryPackageOfDestination(@Param("packageId") Long destinationId);
 }

@@ -18,7 +18,7 @@ import javax.annotation.Resource;
 public class PackageController {
 
     @Resource
-    private IPackageService voucherService;
+    private IPackageService packageService;
 
     /**
      * 新增普通门票
@@ -27,7 +27,7 @@ public class PackageController {
      */
     @PostMapping
     public Result addPackage(@RequestBody Package Package) {
-        voucherService.save(Package);
+        packageService.save(Package);
         return Result.ok(Package.getId());
     }
 
@@ -38,17 +38,30 @@ public class PackageController {
      */
     @PostMapping("seckill")
     public Result addSeckillPackage(@RequestBody Package Package) {
-        voucherService.addSeckillPackage(Package);
+        packageService.addSeckillPackage(Package);
         return Result.ok(Package.getId());
     }
 
     /**
-     * 查询店铺的优惠门票列表
-     * @param shopId 店铺id
+     * 查询景点的优惠门票列表
+     * @param destinationId 景点id
      * @return 优惠门票列表
      */
-    @GetMapping("/list/{shopId}")
-    public Result queryPackageOfShop(@PathVariable("shopId") Long shopId) {
-       return voucherService.queryPackageOfShop(shopId);
+    @GetMapping("/list/{destinationId}")
+    public Result queryPackageOfShop(@PathVariable("destinationId") Long destinationId) {
+       return packageService.queryPackageOfDestination(destinationId);
+    }
+
+    /**
+     * Agent专用接口：
+     * 流程：
+     * 1. destinationService：景点名称 → 景点ID
+     * 2. packageService：根据景点ID查询门票
+     * 3. enrich：秒杀门票
+     */
+    @GetMapping("/agent/package-by-city")
+    public Result queryHotByDestinationForAgent(
+            @RequestParam("city") String city) {
+        return packageService.queryPackageByCityForAgent(city);
     }
 }

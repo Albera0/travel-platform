@@ -35,7 +35,7 @@ public class TravelPostComments implements Serializable {
     private Long userId;
 
     /**
-     * 探店id
+     * 景点id
      */
     private Long destinationId;
 

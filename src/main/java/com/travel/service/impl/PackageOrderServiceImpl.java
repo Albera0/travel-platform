@@ -8,19 +8,23 @@ import com.travel.service.ISeckillPackageService;
 import com.travel.service.IPackageOrderService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.travel.utils.RedisIdWorker;
+import com.travel.utils.RedisConstants;
 import com.travel.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.connection.stream.*;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import javax.annotation.PreDestroy;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.time.Duration;
@@ -29,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>
@@ -41,6 +46,7 @@ public class PackageOrderServiceImpl extends ServiceImpl<PackageOrderMapper, Pac
 
     @Resource
     private ISeckillPackageService seckillPackageService;
+
     @Autowired
     private RedisIdWorker redisIdWorker;
 
@@ -49,6 +55,9 @@ public class PackageOrderServiceImpl extends ServiceImpl<PackageOrderMapper, Pac
 
     @Resource
     private RedissonClient redissonClient;
+
+    @Resource
+    private TransactionTemplate transactionTemplate;
 
     private static final DefaultRedisScript<Long> SECKILL_SCRIPT;
     static {
@@ -59,9 +68,60 @@ public class PackageOrderServiceImpl extends ServiceImpl<PackageOrderMapper, Pac
 
     private static ExecutorService SECKILL_ORDER_EXECUTOR = Executors.newSingleThreadExecutor();
 
+    private volatile boolean running = true;
+
+
     @PostConstruct
-    private void init(){
+    public void testRedis() {
+        System.out.println("Redis ping: " +
+                stringRedisTemplate.getConnectionFactory()
+                        .getConnection()
+                        .ping());
+    }
+
+    @PostConstruct
+    private void init() {
+
+        try {
+
+            // 1. 创建stream
+            stringRedisTemplate.execute((RedisCallback<Object>) connection -> {
+                RedisSerializer<String> serializer = stringRedisTemplate.getStringSerializer();
+                return connection.execute(
+                        "XGROUP",
+                        serializer.serialize("CREATE"),
+                        serializer.serialize("stream.orders"),
+                        serializer.serialize("g1"),
+                        serializer.serialize("$"),
+                        serializer.serialize("MKSTREAM")
+                );
+            });
+
+            // 2. 创建消费组 g1
+
+            log.info("stream.orders 消费组创建成功");
+
+        } catch (Exception e) {
+
+            // 已存在会报错，忽略即可
+            log.info("消费组已存在");
+        }
+
+        // 3. 启动异步线程
         SECKILL_ORDER_EXECUTOR.submit(new PackageOrderHandler());
+    }
+
+    @PreDestroy
+    public void destroy() {
+        running = false;
+        SECKILL_ORDER_EXECUTOR.shutdownNow();
+        try {
+            if (!SECKILL_ORDER_EXECUTOR.awaitTermination(3, TimeUnit.SECONDS)) {
+                log.warn("订单处理线程未在超时时间内退出");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private class PackageOrderHandler implements Runnable {
@@ -70,7 +130,7 @@ public class PackageOrderServiceImpl extends ServiceImpl<PackageOrderMapper, Pac
 
         @Override
         public void run() {
-            while (true){
+            while (running){
                 //1.获取消息队列中的订单信息
                 try {
                     List<MapRecord<String, Object, Object>> list = stringRedisTemplate.opsForStream().read(
@@ -80,7 +140,7 @@ public class PackageOrderServiceImpl extends ServiceImpl<PackageOrderMapper, Pac
                     );
 
                     //判断消息获取是否成功
-                    if (list.isEmpty() || list == null){
+                    if (list == null || list.isEmpty()){
                         //如果获取失败，说明没有消息，继续下一次循环
                         continue;
                     }
@@ -88,6 +148,7 @@ public class PackageOrderServiceImpl extends ServiceImpl<PackageOrderMapper, Pac
                     MapRecord<String, Object, Object> record = list.get(0);
                     Map<Object, Object> values = record.getValue();
                     PackageOrder packageOrder = BeanUtil.fillBeanWithMap(values, new PackageOrder(), true);
+                    fillLegacyPackageId(values, packageOrder);
                     //如果获取成功，下单
                     //2.创建订单
                     handlePackageOrder(packageOrder);
@@ -95,6 +156,14 @@ public class PackageOrderServiceImpl extends ServiceImpl<PackageOrderMapper, Pac
                     stringRedisTemplate.opsForStream().acknowledge(queueName, "g1", record.getId());
 
                 } catch (Exception e) {
+                    if (!running || Thread.currentThread().isInterrupted()) {
+                        break;
+                    }
+                    if (isRedisConnectionException(e)) {
+                        log.warn("Redis连接异常，订单处理线程稍后重试：{}", e.getMessage());
+                        sleepQuietly(1000);
+                        continue;
+                    }
                     log.error("处理订单异常", e);
                     handlePendingList();
                 }
@@ -102,7 +171,7 @@ public class PackageOrderServiceImpl extends ServiceImpl<PackageOrderMapper, Pac
         }
 
         private void handlePendingList(){
-            while (true){
+            while (running){
                 //1.获取消息队列中的订单信息
                 try {
                     List<MapRecord<String, Object, Object>> list = stringRedisTemplate.opsForStream().read(
@@ -112,7 +181,7 @@ public class PackageOrderServiceImpl extends ServiceImpl<PackageOrderMapper, Pac
                     );
 
                     //判断消息获取是否成功
-                    if (list.isEmpty() || list == null){
+                    if (list == null || list.isEmpty()){
                         //如果获取失败，说明pending-list没有消息，继续下一次循环
                         break;
                     }
@@ -120,6 +189,7 @@ public class PackageOrderServiceImpl extends ServiceImpl<PackageOrderMapper, Pac
                     MapRecord<String, Object, Object> record = list.get(0);
                     Map<Object, Object> values = record.getValue();
                     PackageOrder packageOrder = BeanUtil.fillBeanWithMap(values, new PackageOrder(), true);
+                    fillLegacyPackageId(values, packageOrder);
                     //如果获取成功，下单
                     //2.创建订单
                     handlePackageOrder(packageOrder);
@@ -127,14 +197,49 @@ public class PackageOrderServiceImpl extends ServiceImpl<PackageOrderMapper, Pac
                     stringRedisTemplate.opsForStream().acknowledge(queueName, "g1", record.getId());
 
                 } catch (Exception e) {
-                    log.error("处理pending-list订单异常", e);
-                    try {
-                        Thread.sleep(20);
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
+                    if (!running || Thread.currentThread().isInterrupted()) {
+                        break;
                     }
+                    if (isRedisConnectionException(e)) {
+                        log.warn("Redis连接异常，暂停处理pending-list：{}", e.getMessage());
+                        sleepQuietly(1000);
+                        break;
+                    }
+                    log.error("处理pending-list订单异常", e);
+                    sleepQuietly(200);
                 }
             }
+        }
+    }
+
+
+    private boolean isRedisConnectionException(Throwable e) {
+        Throwable cause = e;
+        while (cause != null) {
+            String className = cause.getClass().getName();
+            if (className.contains("RedisConnectionFailureException")
+                    || className.contains("RedisSystemException")
+                    || className.contains("RedisConnectionException")
+                    || className.contains("RedisException")) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
+    }
+
+    private void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+
+    private void fillLegacyPackageId(Map<Object, Object> values, PackageOrder packageOrder) {
+        if (packageOrder.getPackageId() == null && values.containsKey("voucherId")) {
+            packageOrder.setPackageId(Long.valueOf(values.get("voucherId").toString()));
         }
     }
 
@@ -142,6 +247,10 @@ public class PackageOrderServiceImpl extends ServiceImpl<PackageOrderMapper, Pac
     private void handlePackageOrder(PackageOrder packageOrder) {
         //获取用户id
         Long userId = packageOrder.getUserId();
+        if (userId == null || packageOrder.getPackageId() == null) {
+            log.warn("忽略无效订单消息：{}", packageOrder);
+            return;
+        }
         //创建锁对象
         RLock lock = redissonClient.getLock("lock:order:" + userId);
 
@@ -155,19 +264,21 @@ public class PackageOrderServiceImpl extends ServiceImpl<PackageOrderMapper, Pac
         }
         //获取事务有关的代理对象
         try {
-            proxy.createPackageOrder(packageOrder);
+            transactionTemplate.executeWithoutResult(status -> createPackageOrder(packageOrder));
         } finally {
             //释放锁
             lock.unlock();
         }
     }
 
-    private IPackageOrderService proxy;
-
     @Override
     public Result seckKillPackage(Long voucherId) {
         //获取用户id
         Long userId = UserHolder.getUser().getId();
+        Result cacheResult = ensureSeckillStockCached(voucherId);
+        if (cacheResult != null) {
+            return cacheResult;
+        }
         //获取订单id
         long orderId = redisIdWorker.nextId("order");
 
@@ -188,10 +299,27 @@ public class PackageOrderServiceImpl extends ServiceImpl<PackageOrderMapper, Pac
         }
 
         //获取代理对象
-        proxy = (IPackageOrderService) AopContext.currentProxy();
-
         //3.返回订单id
         return Result.ok(orderId);
+    }
+
+    private Result ensureSeckillStockCached(Long packageId) {
+        String stockKey = RedisConstants.SECKILL_STOCK_KEY + packageId;
+        String stock = stringRedisTemplate.opsForValue().get(stockKey);
+        if (stock != null) {
+            return null;
+        }
+
+        com.travel.entity.SeckillPackage seckillPackage = seckillPackageService.getById(packageId);
+        if (seckillPackage == null) {
+            return Result.fail("套餐不存在");
+        }
+        if (seckillPackage.getStock() == null || seckillPackage.getStock() <= 0) {
+            return Result.fail("库存不足");
+        }
+
+        stringRedisTemplate.opsForValue().setIfAbsent(stockKey, seckillPackage.getStock().toString());
+        return null;
     }
 
 
@@ -201,7 +329,7 @@ public class PackageOrderServiceImpl extends ServiceImpl<PackageOrderMapper, Pac
         Long userId = packageOrder.getUserId();
 
         //查询订单
-        int count = query().eq("user_id", userId).eq("voucher_id", packageOrder.getPackageId()).count();
+        int count = query().eq("user_id", userId).eq("package_id", packageOrder.getPackageId()).count();
 
         //判断是否存在
         if (count > 0) {
@@ -213,7 +341,7 @@ public class PackageOrderServiceImpl extends ServiceImpl<PackageOrderMapper, Pac
         //5.扣减库存
         boolean success = seckillPackageService.update()
                 .setSql("stock = stock - 1")
-                .eq("voucher_id", packageOrder.getPackageId()).gt("stock", 0)
+                .eq("package_id", packageOrder.getPackageId()).gt("stock", 0)
                 .update();
 
         if (!success) {
